@@ -59,6 +59,10 @@ __BEGIN_DECLS
 #define SENSOR_TYPE_PRESSURE            6
 #define SENSOR_TYPE_TEMPERATURE         7
 #define SENSOR_TYPE_PROXIMITY           8
+#if defined(__DEVICE_shadow__) || defined(__DEVICE_droid2__)
+#define SENSOR_TYPE_ROTATION            9
+#define SENSOR_TYPE_GESTURES            10
+#endif
 
 /**
  * Values returned by the accelerometer in various locations in the universe.
@@ -347,6 +351,22 @@ struct sensors_control_device_t {
      * @return 0 if successful, < 0 on error
      */
     int (*set_delay)(struct sensors_control_device_t *dev, int32_t ms);
+
+#if defined(__DEVICE_shadow__) || defined(__DEVICE_droid2__)
+    /**
+     * Set the input device fuzz parameter
+     *
+     * @return 0 if successful, < 0 on error
+     */
+    int (*set_fuzz)(struct sensors_control_device_t *dev, int32_t fuzz);
+
+    /**
+     * Set the input_device previous xyz values
+     *
+     * @return 0 if successful, < 0 on error
+     */
+    int (*set_xyz_history)(struct sensors_control_device_t *dev, int32_t xyz);
+#endif
 
     /**
      * Causes sensors_data_device_t.poll() to return -EWOULDBLOCK immediately.

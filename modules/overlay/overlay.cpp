@@ -133,6 +133,12 @@ static overlay_t* overlay_createOverlay(struct overlay_control_device_t *dev,
         case OVERLAY_FORMAT_RGB_565:
         case OVERLAY_FORMAT_BGRA_8888:
         // add supported format here (especially YUV formats)
+#if defined(__DEVICE_shadow__) || defined(__DEVICE_droid2__)
+        case OVERLAY_FORMAT_YCbCr_422_SP:
+        case OVERLAY_FORMAT_YCbCr_420_SP:
+        case OVERLAY_FORMAT_YCbYCr_422_I:
+        case OVERLAY_FORMAT_YCbYCr_420_I:
+#endif
             break;
         default:
             return NULL;
