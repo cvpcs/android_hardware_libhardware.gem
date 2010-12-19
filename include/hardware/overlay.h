@@ -45,12 +45,8 @@ enum {
     OVERLAY_FORMAT_RGBA_8888    = HAL_PIXEL_FORMAT_RGBA_8888,
     OVERLAY_FORMAT_RGB_565      = HAL_PIXEL_FORMAT_RGB_565,
     OVERLAY_FORMAT_BGRA_8888    = HAL_PIXEL_FORMAT_BGRA_8888,
-    OVERLAY_FORMAT_YCbCr_422_SP = HAL_PIXEL_FORMAT_YCbCr_422_SP,
-    OVERLAY_FORMAT_YCbCr_420_SP = HAL_PIXEL_FORMAT_YCbCr_420_SP,
-    OVERLAY_FORMAT_YCbYCr_422_I = HAL_PIXEL_FORMAT_YCbCr_422_I,
-    OVERLAY_FORMAT_YCbYCr_420_I = HAL_PIXEL_FORMAT_YCbCr_420_I,
-    OVERLAY_FORMAT_CbYCrY_422_I = HAL_PIXEL_FORMAT_CbYCrY_422_I,
-    OVERLAY_FORMAT_CbYCrY_420_I = HAL_PIXEL_FORMAT_CbYCrY_420_I,
+    OVERLAY_FORMAT_YCbYCr_422_I = 0x14,
+    OVERLAY_FORMAT_CbYCrY_422_I = 0x16,
     OVERLAY_FORMAT_DEFAULT      = 99    // The actual color format is determined
                                         // by the overlay
 };
@@ -58,9 +54,9 @@ enum {
 /* values for copybit_set_parameter(OVERLAY_TRANSFORM) */
 enum {
     /* flip source image horizontally */
-    OVERLAY_TRANSFORM_FLIP_H    = HAL_TRANSFORM_FLIP_V,
+    OVERLAY_TRANSFORM_FLIP_H    = HAL_TRANSFORM_FLIP_H,
     /* flip source image vertically */
-    OVERLAY_TRANSFORM_FLIP_V    = HAL_TRANSFORM_FLIP_H,
+    OVERLAY_TRANSFORM_FLIP_V    = HAL_TRANSFORM_FLIP_V,
     /* rotate source image 90 degrees */
     OVERLAY_TRANSFORM_ROT_90    = HAL_TRANSFORM_ROT_90,
     /* rotate source image 180 degrees */

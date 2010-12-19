@@ -34,8 +34,7 @@ __BEGIN_DECLS
 /**
  * Name of the sensors device to open
  */
-#define SENSORS_HARDWARE_CONTROL    "control"
-#define SENSORS_HARDWARE_DATA       "data"
+#define SENSORS_HARDWARE_POLL       "poll"
 
 /**
  * Handles must be higher than SENSORS_HANDLE_BASE and must be unique.
@@ -59,9 +58,13 @@ __BEGIN_DECLS
 #define SENSOR_TYPE_PRESSURE            6
 #define SENSOR_TYPE_TEMPERATURE         7
 #define SENSOR_TYPE_PROXIMITY           8
+#define SENSOR_TYPE_GRAVITY             9
+#define SENSOR_TYPE_LINEAR_ACCELERATION 10
+#define SENSOR_TYPE_ROTATION_VECTOR     11
+
 #if defined(__DEVICE_shadow__) || defined(__DEVICE_droid2__)
-#define SENSOR_TYPE_ROTATION            9
-#define SENSOR_TYPE_GESTURES            10
+#define SENSOR_TYPE_ROTATION            12
+#define SENSOR_TYPE_GESTURES            13
 #endif
 
 /**
@@ -70,18 +73,7 @@ __BEGIN_DECLS
  */
 
 #define GRAVITY_SUN             (275.0f)
-#define GRAVITY_MERCURY         (3.70f)
-#define GRAVITY_VENUS           (8.87f)
 #define GRAVITY_EARTH           (9.80665f)
-#define GRAVITY_MOON            (1.6f)
-#define GRAVITY_MARS            (3.71f)
-#define GRAVITY_JUPITER         (23.12f)
-#define GRAVITY_SATURN          (8.96f)
-#define GRAVITY_URANUS          (8.69f)
-#define GRAVITY_NEPTUNE         (11.0f)
-#define GRAVITY_PLUTO           (0.6f)
-#define GRAVITY_DEATH_STAR_I    (0.000000353036145f)
-#define GRAVITY_THE_ISLAND      (4.815162342f)
 
 /** Maximum magnetic field on Earth's surface */
 #define MAGNETIC_FIELD_EARTH_MAX    (60.0f)
@@ -134,6 +126,9 @@ __BEGIN_DECLS
  * 
  * All values are angles in degrees.
  * 
+ * Orientation sensors return sensor events for all 3 axes at a constant
+ * rate defined by setDelay().
+ *
  * azimuth: angle between the magnetic north direction and the Y axis, around 
  *  the Z axis (0<=azimuth<360).
  *      0=North, 90=East, 180=South, 270=West
@@ -169,6 +164,9 @@ __BEGIN_DECLS
  *  All values are in SI units (m/s^2) and measure the acceleration of the
  *  device minus the force of gravity.
  *  
+ *  Acceleration sensors return sensor events for all 3 axes at a constant
+ *  rate defined by setDelay().
+ *
  *  x: Acceleration minus Gx on the x-axis 
  *  y: Acceleration minus Gy on the y-axis 
  *  z: Acceleration minus Gz on the z-axis
@@ -193,6 +191,22 @@ __BEGIN_DECLS
  *  All values are in micro-Tesla (uT) and measure the ambient magnetic
  *  field in the X, Y and Z axis.
  *
+ *  Magnetic Field sensors return sensor events for all 3 axes at a constant
+ *  rate defined by setDelay().
+ *
+ * Gyroscope
+ * ---------
+ *  All values are in radians/second and measure the rate of rotation
+ *  around the X, Y and Z axis.  The coordinate system is the same as is
+ *  used for the acceleration sensor. Rotation is positive in the
+ *  counter-clockwise direction (right-hand rule). That is, an observer
+ *  looking from some positive location on the x, y or z axis at a device
+ *  positioned on the origin would report positive rotation if the device
+ *  appeared to be rotating counter clockwise. Note that this is the
+ *  standard mathematical definition of positive rotation and does not agree
+ *  with the definition of roll given earlier.
+ *  The range should at least be 17.45 rad/s (ie: ~1000 deg/s).
+ *
  * Proximity
  * ---------
  *
@@ -201,12 +215,50 @@ __BEGIN_DECLS
  * the sensor should report its maxRange value in the "far" state and a value
  * less than maxRange in the "near" state.
  *
+ * Proximity sensors report a value only when it changes and each time the
+ * sensor is enabled. setDelay() is ignored.
+ *
  * Light
  * -----
  *
  * The light sensor value is returned in SI lux units.
  *
+ * Light sensors report a value only when it changes and each time the
+ * sensor is enabled. setDelay() is ignored.
+ *
+ * Pressure
+ * --------
+ *
+ * The pressure sensor value is returned in hectopascal (hPa)
+ *
+ * Pressure sensors report events at a constant rate defined by setDelay().
+ *
+ * Gravity
+ * -------
+ * A gravity output indicates the direction of and magnitude of gravity in the devices's
+ * coordinates.  On Earth, the magnitude is 9.8.  Units are m/s^2.  The coordinate system
+ * is the same as is used for the acceleration sensor.
+ *
+ * Linear Acceleration
+ * -------------------
+ * Indicates the linear acceleration of the device in device coordinates, not including gravity.
+ * This output is essentially Acceleration - Gravity.  Units are m/s^2.  The coordinate system is
+ * the same as is used for the acceleration sensor.
+ *
+ * Rotation Vector
+ * ---------------
+ * A rotation vector represents the orientation of the device as a combination
+ * of an angle and an axis, in which the device has rotated through an angle
+ * theta around an axis <x, y, z>. The three elements of the rotation vector
+ * are <x*sin(theta/2), y*sin(theta/2), z*sin(theta/2)>, such that the magnitude
+ * of the rotation vector is equal to sin(theta/2), and the direction of the
+ * rotation vector is equal to the direction of the axis of rotation. The three
+ * elements of the rotation vector are equal to the last three components of a
+ * unit quaternion <cos(theta/2), x*sin(theta/2), y*sin(theta/2), z*sin(theta/2)>.
+ * Elements of the rotation vector are unitless.  The x, y, and z axis are defined
+ * in the same was as for the acceleration sensor.
  */
+
 typedef struct {
     union {
         float v[3];
@@ -229,22 +281,36 @@ typedef struct {
  * Union of the various types of sensor data
  * that can be returned.
  */
-typedef struct {
+typedef struct sensors_event_t {
+    /* must be sizeof(struct sensors_event_t) */
+    int32_t version;
+
     /* sensor identifier */
-    int             sensor;
+    int32_t sensor;
+
+    /* sensor type */
+    int32_t type;
+
+    /* reserved */
+    int32_t reserved0;
+
+    /* time is in nanosecond */
+    int64_t timestamp;
 
     union {
-        /* x,y,z values of the given sensor */
-        sensors_vec_t   vector;
-
-        /* orientation values are in degrees */
-        sensors_vec_t   orientation;
+        float           data[16];
 
         /* acceleration values are in meter per second per second (m/s^2) */
         sensors_vec_t   acceleration;
 
         /* magnetic vector values are in micro-Tesla (uT) */
         sensors_vec_t   magnetic;
+
+        /* orientation values are in degrees */
+        sensors_vec_t   orientation;
+
+        /* gyroscope values are in rad/s */
+        sensors_vec_t   gyro;
 
         /* temperature is in degrees centigrade (Celsius) */
         float           temperature;
@@ -254,13 +320,13 @@ typedef struct {
 
         /* light in SI lux units */
         float           light;
+
+        /* pressure in hectopascal (hPa) */
+        float           pressure;
     };
+    uint32_t        reserved1[4];
+} sensors_event_t;
 
-    /* time is in nanosecond */
-    int64_t         time;
-
-    uint32_t        reserved;
-} sensors_data_t;
 
 
 struct sensor_t;
@@ -287,7 +353,7 @@ struct sensor_t {
     /* vendor of the hardware part */
     const char*     vendor;
     /* version of the hardware part + driver. The value of this field is
-     * left to the implementation and doesn't have to be monotonicaly
+     * left to the implementation and doesn't have to be monotonically
      * increasing.
      */    
     int             version;
@@ -304,8 +370,12 @@ struct sensor_t {
     float           resolution;
     /* rough estimate of this sensor's power consumption in mA */
     float           power;
+    /* minimum delay allowed between events in microseconds. A value of zero
+     * means that this sensor doesn't report events at a constant rate, but
+     * rather only when a new data is available */
+    int32_t         minDelay;
     /* reserved fields, must be zero */
-    void*           reserved[9];
+    void*           reserved[8];
 };
 
 
@@ -313,27 +383,8 @@ struct sensor_t {
  * Every device data structure must begin with hw_device_t
  * followed by module specific public methods and attributes.
  */
-struct sensors_control_device_t {
+struct sensors_poll_device_t {
     struct hw_device_t common;
-    
-    /**
-     * Returns a native_handle_t, which will be the parameter to
-     * sensors_data_device_t::open_data(). 
-     * The caller takes ownership of this handle. This is intended to be
-     * passed cross processes.
-     *
-     * @return a native_handle_t if successful, NULL on error
-     */
-    native_handle_t* (*open_data_source)(struct sensors_control_device_t *dev);
-
-    /**
-     * Releases any resources that were created by open_data_source.
-     * This call is optional and can be NULL if not implemented
-     * by the sensor HAL.
-     *
-     * @return 0 if successful, < 0 on error
-     */
-    int (*close_data_source)(struct sensors_control_device_t *dev);
 
     /** Activate/deactivate one sensor.
      *
@@ -342,15 +393,8 @@ struct sensors_control_device_t {
      *
      * @return 0 on success, negative errno code otherwise
      */
-    int (*activate)(struct sensors_control_device_t *dev, 
+    int (*activate)(struct sensors_poll_device_t *dev,
             int handle, int enabled);
-    
-    /**
-     * Set the delay between sensor events in ms
-     *
-     * @return 0 if successful, < 0 on error
-     */
-    int (*set_delay)(struct sensors_control_device_t *dev, int32_t ms);
 
 #if defined(__DEVICE_shadow__) || defined(__DEVICE_droid2__)
     /**
@@ -358,82 +402,53 @@ struct sensors_control_device_t {
      *
      * @return 0 if successful, < 0 on error
      */
-    int (*set_fuzz)(struct sensors_control_device_t *dev, int32_t fuzz);
+    int (*set_fuzz)(struct sensors_poll_device_t *dev, int32_t fuzz);
 
     /**
      * Set the input_device previous xyz values
      *
      * @return 0 if successful, < 0 on error
      */
-    int (*set_xyz_history)(struct sensors_control_device_t *dev, int32_t xyz);
+    int (*set_xyz_history)(struct sensors_poll_device_t *dev, int32_t xyz);
 #endif
 
     /**
-     * Causes sensors_data_device_t.poll() to return -EWOULDBLOCK immediately.
-     */
-    int (*wake)(struct sensors_control_device_t *dev);
-};
-
-struct sensors_data_device_t {
-    struct hw_device_t common;
-
-    /**
-     * Prepare to read sensor data.
-     *
-     * This routine does NOT take ownership of the handle
-     * and must not close it. Typically this routine would
-     * use a duplicate of the nh parameter.
-     *
-     * @param nh from sensors_control_open.
+     * Set the delay between sensor events in nanoseconds for a given sensor.
+     * It is an error to set a delay inferior to the value defined by
+     * sensor_t::minDelay. If sensor_t::minDelay is zero, setDelay() is
+     * ignored and returns 0.
      *
      * @return 0 if successful, < 0 on error
      */
-    int (*data_open)(struct sensors_data_device_t *dev, native_handle_t* nh);
-    
-    /**
-     * Caller has completed using the sensor data.
-     * The caller will not be blocked in sensors_data_poll
-     * when this routine is called.
-     *
-     * @return 0 if successful, < 0 on error
-     */
-    int (*data_close)(struct sensors_data_device_t *dev);
-    
-    /**
-     * Return sensor data for one of the enabled sensors.
-     *
-     * @return sensor handle for the returned data, 0x7FFFFFFF when 
-     * sensors_control_device_t.wake() is called and -errno on error
-     *  
-     */
-    int (*poll)(struct sensors_data_device_t *dev, 
-            sensors_data_t* data);
-};
+    int (*setDelay)(struct sensors_poll_device_t *dev,
+            int handle, int64_t ns);
 
+    /**
+     * Returns an array of sensor data.
+     * This function must block until events are available.
+     *
+     * @return the number of events read on success, or -errno in case of an error.
+     * This function should never return 0 (no event).
+     *
+     */
+    int (*poll)(struct sensors_poll_device_t *dev,
+            sensors_event_t* data, int count);
+};
 
 /** convenience API for opening and closing a device */
 
-static inline int sensors_control_open(const struct hw_module_t* module, 
-        struct sensors_control_device_t** device) {
-    return module->methods->open(module, 
-            SENSORS_HARDWARE_CONTROL, (struct hw_device_t**)device);
+static inline int sensors_open(const struct hw_module_t* module,
+        struct sensors_poll_device_t** device) {
+    return module->methods->open(module,
+            SENSORS_HARDWARE_POLL, (struct hw_device_t**)device);
 }
 
-static inline int sensors_control_close(struct sensors_control_device_t* device) {
+static inline int sensors_close(struct sensors_poll_device_t* device) {
     return device->common.close(&device->common);
 }
-
-static inline int sensors_data_open(const struct hw_module_t* module, 
-        struct sensors_data_device_t** device) {
-    return module->methods->open(module, 
-            SENSORS_HARDWARE_DATA, (struct hw_device_t**)device);
-}
-
-static inline int sensors_data_close(struct sensors_data_device_t* device) {
-    return device->common.close(&device->common);
-}
-
 
 __END_DECLS
+
+#include <hardware/sensors_deprecated.h>
 
 #endif  // ANDROID_SENSORS_INTERFACE_H
